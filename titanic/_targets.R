@@ -6,6 +6,9 @@ library(causaldata)
 library(targets)
 library(cmdstanr)
 
+# Load functions
+source("functions/simulate_titanic_function.R")
+source("functions/check_gen_model.R")
 
 #### 2 Pipeline ####
 list(
@@ -28,10 +31,15 @@ list(
 }
 ')
     ),
-  #### 5 Scientific Model ####
+  #### 5 Generative  Model ####
   tar_target(
-    name = titanic_sc_model,
-    command = simulate_titanic()
-    )
+    name = titanic_gen_model,
+    command = simulate_titanic(n = 10000)
+    ),
 
+  ## Check the Generative Model ##
+  tar_target(
+    name = check_gen_plots,
+    command = check_gen_model(titanic_gen_model)
+  )
 )
