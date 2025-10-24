@@ -5,10 +5,12 @@ library(dagitty)
 library(causaldata)
 library(targets)
 library(cmdstanr)
+library(brms)
 
 # Load functions
 source("functions/simulate_titanic_function.R")
 source("functions/check_gen_model.R")
+source("functions/b_model_age.R")
 
 #### 2 Pipeline ####
 list(
@@ -34,12 +36,23 @@ list(
   #### 5 Generative  Model ####
   tar_target(
     name = titanic_gen_model,
-    command = simulate_titanic(n = 10000)
+    command = simulate_titanic(10000)
     ),
 
   ## Check the Generative Model ##
   tar_target(
     name = check_gen_plots,
     command = check_gen_model(titanic_gen_model)
-  )
+  ),
+  #### BRMS Model for estimating the direct effect of Age to Survival ####
+
+  # With the Generative model
+  tar_target(
+    name = b_model_age_gen,
+    command = b_model_age(titanic_gen_model)),
+
+  # With the actual data
+  tar_target(
+    name = b_model_age,
+    command = b_model_age(titanic_dataset))
 )
