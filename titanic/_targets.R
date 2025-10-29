@@ -7,6 +7,7 @@ library(targets)
 library(cmdstanr)
 library(brms)
 library(bayesplot)
+library(posterior)
 
 # Load functions
 source("functions/simulate_titanic_function.R")
@@ -46,10 +47,39 @@ list(
     name = check_gen_plots,
     command = check_gen_model(titanic_gen_model)
   ),
-  #### BRMS Model for estimating the direct effect of Age to Survival ####
+  #### 6 BRMS Model for estimating the direct effect of Age to Survival ####
 
-  # With the actual data
+  # Simple Model with one Population prior and one intercept without interactions
   tar_target(
     name = model_age,
-    command = b_model_age(titanic_dataset))
+    command = b_model_age(titanic_dataset)
+    ),
+
+  # Model with more priors without interactions
+  tar_target(
+    name = model_age_p,
+    command = b_model_age_p(titanic_dataset)
+  ),
+
+  # Compare models
+  tar_target(
+    name = model_age_vs_model_age_p,
+    command = compare_models(model_age,model_age_p)
+  )
+  # Model with interactions
+
+
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
