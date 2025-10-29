@@ -23,43 +23,89 @@ b_model_age <- function(data){
     seed = 111
     )
 
+
+  #### MODEL and  CONVERGENCE ####
   # Extract posterior draws
   post_draws <- as_draws_df(model)
 
+  modeling <- list(
+    model_object = model,
+    summary = summary(model),
+    post_draws = post_draws,
+    formula = formula(model)
+  )
+
+  #### CONVERGENCE DIAGNOSTICS ####
+
   # Convergence checks
-  trace_plot <- mcmc_trace(post_draws, pars = c("b_age1","b_Intercept"))
+  trace_plot <- mcmc_plot(model,type = "trace")+
+    ggtitle(label = "Convergence Trace Plot ")+
+    theme_minimal()
 
   # Sample Size check
-  effect_sample <- mcmc_neff(neff_ratio(model))
+  effect_sample <- mcmc_neff(neff_ratio(model))+
+    ggtitle(label = "Effect Sample Size ")+
+    theme_minimal()
 
   # Posterior Summaries
-  dens <- mcmc_dens_overlay(post_draws, pars = c("b_age1", "b_Intercept"))
-  interval <- mcmc_intervals(post_draws, pars = c("b_age1", "b_Intercept"))
+  posterior_samples_per_param <- mcmc_plot(model,type = "hist",bins = 30)+
+    ggtitle(label = "Posterior Summaries")+
+    theme_minimal()
+
+  diagnostics <- list(
+    trace_plot = trace_plot,
+    effect_sample = effect_sample,
+    posterior_samples = posterior_samples_per_param,
+    rhat = rhat(model),
+    neff = neff_ratio(model)
+  )
+
+  #### POSTERIOR PREDICTIVE CHECKS ####
 
   # Posterior Predictive Checks
-  pp <- pp_check(model, type = "bars")
+  pp_pred <- pp_check(model, type = "bars")
 
-  # Influence and Fit
-  loo <- loo_result <- plot(loo(model))
+  # Posterior Error Checks
+  pp_error <- pp_check(model, type = "error_binned")
 
-  # Effect of age on the log odds scale
-  age_effect_log <- post_draws$b_age1
+  # Posterior Stats Checks
+  pp_mean <- pp_check(model, type = "stat", stat = "mean")
+  pp_sd <- pp_check(model, type = "stat", stat = "sd")
+  pp_group_sex <- pp_check(model, type = "stat_grouped", group = "sex", stat = "mean")
+  pp_group_class <- pp_check(model, type = "stat_grouped", group = "class", stat = "mean")
 
-  #### Calculate Conditional probability ####
+  predictive_checks <- list(
+    pp_pred = pp_pred,
+    pp_error = pp_error,
+    pp_mean = pp_mean,
+    pp_sd = pp_sd,
+    pp_group_sex = pp_group_sex,
+    pp_group_class = pp_group_class
+  )
+
+  #### CONDITIONAL EFFECTS ####
+
+  # Conditional Effect of posterior fitted means
+  effect_post_means <- conditional_effects(model,method = "posterior_epred")
+
+  # Conditional Effect Full predictive draws
+  effect_post_pred <- conditional_effects(model,method = "posterior_predict")
+
+  # Calculate Conditional probability #
   prob_adult_1st_class_male <- conditional_prob(
     dataset = data,
     post_draws = post_draws,
     age = "1",
     sex = "1",
     class = "1"
-    )
+  )
   prob_child_1st_class_male <- conditional_prob(
     dataset = data,
     post_draws = post_draws,
     age = "0",
     sex = "1",
     class ="1"
-    )
+  )
   prob_child_1st_class_female <- conditional_prob(
     dataset = data,
     post_draws = post_draws,
@@ -75,6 +121,7 @@ b_model_age <- function(data){
     class = "1"
   )
 
+  # Wrangle the data
   prob_data_1st_class_male <- data.frame(
     age_group = rep(c("Adult", "Child"), each = length(prob_adult_1st_class_male)),
     probability = c(prob_adult_1st_class_male, prob_child_1st_class_male)
@@ -84,33 +131,46 @@ b_model_age <- function(data){
     probability = c(prob_adult_1st_class_female, prob_child_1st_class_female)
   )
 
-  # Store plots for Age effect
-  effect_plots <- list()
-
-  # Age Posterior Distribution by groups Marginal Effect of age
-  effect_plots$age_posterior_prob_1st_class_male <-
+  # Age Posterior Distribution by groups of age
+  age_posterior_prob_1st_class_male <-
     ggplot(data = prob_data_1st_class_male,aes(x = probability,fill = age_group))+
     geom_density(alpha = 0.5)+
     theme_minimal()+
     labs(
-      title = "Age Posterior Distributions of meles by Age groups",
+      title = "Age Posterior Distributions of males by Age groups in the 1st class",
       x = "Probability of Survival",
       y = "Density",
       fill = "Age Group"
     )
 
-  effect_plots$age_posterior_prob_1st_class_female <-
+  age_posterior_prob_1st_class_female <-
     ggplot(data = prob_data_1st_class_female,aes(x = probability,fill = age_group))+
     geom_density(alpha = 0.5)+
     theme_minimal()+
     labs(
-      title = "Age Posterior Distribution of females by Age groups",
+      title = "Age Posterior Distribution of females by Age groups in the 1st class",
       x = "Probability of Survival",
       y = "Density",
       fill = "Age Group"
     )
 
-  #### Marginal probability ####
+  # Get everything together to return as a list
+  conditional_effects <- list(
+    fitted_means = effect_post_means,
+    predictive_draws = effect_post_pred,
+    specific_probabilities = list(
+      adult_male_1st = prob_adult_1st_class_male,
+      child_male_1st = prob_child_1st_class_male,
+      child_female_1st = prob_child_1st_class_female,
+      adult_female_1st = prob_adult_1st_class_female
+      ),
+    plots = list(
+      cond_ef_age_by_male = age_posterior_prob_1st_class_male,
+      cond_ef_age_by_female = age_posterior_prob_1st_class_female
+      )
+    )
+
+  #### MARGINAL EFFECTS ####
 
   # Get all possible combinations
   grid <- expand.grid(
@@ -124,19 +184,19 @@ b_model_age <- function(data){
   for (i in 1:nrow(grid)) {
     combination <- grid[i,]
     prob[[i]] <- conditional_prob(
-                                  dataset = data,
-                                  post_draws = post_draws,
-                                  age = as.character(combination$age),
-                                  sex = as.character(combination$sex),
-                                  class = as.character(combination$class)
-                                  )
+      dataset = data,
+      post_draws = post_draws,
+      age = as.character(combination$age),
+      sex = as.character(combination$sex),
+      class = as.character(combination$class)
+    )
   }
 
   # Group by age and average
   marginal_prob <- data.frame(
     age = grid$age,
     probability = unlist(lapply(prob,mean))
-    )
+  )
 
   # Calculate overall average by age
   marginal_summary <- marginal_prob %>%
@@ -148,8 +208,8 @@ b_model_age <- function(data){
     )
 
   # Display Marginal Probability
-  effect_plots$marginal_prob <-
-  ggplot(data = marginal_summary, aes(x = age, y = mean_probability)) +
+  marginal_prob <-
+    ggplot(data = marginal_summary, aes(x = age, y = mean_probability)) +
     geom_pointrange(aes(ymin = lower_95, ymax = upper_95),size = 1, color = "darkred") +
     labs(
       title = "Marginal Age Effects",
@@ -159,27 +219,37 @@ b_model_age <- function(data){
     scale_y_continuous(labels = scales::percent) +
     theme_minimal()
 
-  # Age Posterior Distribution in Log odds scale
-  effect_plots$age_posterior <-
-    ggplot(data = as.data.frame(age_effect_log),aes(x =age_effect_log))+
-    geom_density(fill = "lightblue")+
-    geom_vline(xintercept = mean(age_effect_log),colour = "black",linetype = "dashed")+
-    theme_minimal()+
-    labs(
-      title = "Age Posterior Distribution in log odds scale",
-      x = "Desity",
-      y = "Log Odds"
+
+  # Return list with marginal summaries and stats
+  marginal_effects <- list(
+    marginal_summary = marginal_summary,
+    plots = list(
+      marginal_age_effect = marginal_prob
     )
+  )
+
+  #### MODEL COMPARISON & FIT ####
+  loo <- loo(model)
+
+  model_comparison <- list(
+    loo_result = loo,
+    pareto_k_plot = plot(loo),
+    loo_summary = data.frame(
+      Metric = c("ELPD", "p_loo", "LOOIC"),
+      Value = loo$estimates[, "Estimate"],
+      SE = loo$estimates[, "SE"]
+      ),
+    bayes_r = bayes_R2(model)
+  )
 
   # Return list
   return(list(
-    trace_plot = trace_plot,
-    effect_sample = effect_sample,
-    density_overlay = dens,
-    posterior_interval = interval,
-    posterior_predictive = pp,
-    loo = loo,
-    effect_plots = effect_plots
-  ))
+    model = modeling,
+    convergence_diagnostics = diagnostics,
+    posterior_predictive_checks = predictive_checks,
+    conditional_effects = conditional_effects,
+    marginal_effects = marginal_effects,
+    model_comparison = model_comparison
+    ))
 }
 
