@@ -3,13 +3,13 @@
 howell_make_gen <- function(n){
 
   # Simulate sex from a bernulli distribution
-  sex <- rbinom(n = 1000,size = 1,prob = 0.5)
+  sex <- rbinom(n = n,size = 1,prob = 0.5)
 
   # Simulate Age from a Normal distribution with mean 40 and sd of 10
-  age <- pmax(round(rnorm(n = 1000, mean = 20,sd = 10)),1)
+  age <- pmax(round(rnorm(n = n, mean = 20,sd = 10)),1)
 
   # Simulate weight and the effect of age and sex + random error
-  random_error <- rnorm(n = 1000,mean = 0,sd = 2)
+  random_error <- rnorm(n = n ,mean = 0,sd = 2)
   weight <- case_when(
     age <= 9 & age >= 1 ~ 20 + 0.9 * age + 5 * sex + random_error,
     age > 9  & age <= 18 ~ 40 + 0.7 * age + 10 * sex + random_error,
