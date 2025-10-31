@@ -2,40 +2,73 @@
 #### Function to make a Generative model for Howell dataset ####
 howell_make_gen <- function(n){
 
-  # Simulate sex from a bernulli distribution
-  sex <- rbinom(n = n,size = 1,prob = 0.5)
+  # Covariates
+  sex <- rbinom(n, 1, 0.5)
+  age <- pmax(round(rnorm(n, mean = 20, sd = 10)), 1)
 
-  # Simulate Age from a Normal distribution with mean 40 and sd of 10
-  age <- pmax(round(rnorm(n = n, mean = 20,sd = 10)),1)
+  # Noise terms
+  eps_w <- rnorm(n, 0, 2.5)   # noise for weight
+  eps_h <- rnorm(n, 0, 3.0)   # noise for height
 
-  # Simulate weight and the effect of age and sex + random error
-  random_error <- rnorm(n = n ,mean = 0,sd = 2)
-  weight <- case_when(
-    age <= 9 & age >= 1 ~ 20 + 0.9 * age + 5 * sex + random_error,
-    age > 9  & age <= 18 ~ 40 + 0.7 * age + 10 * sex + random_error,
-    age > 18 & age < 30 ~ 50 + 0.5 * age + 15 * sex + random_error,
-    age >= 30 ~ 50 + 0.4 * age + 15 * sex + random_error
-  )
+  # Build spline basis
+  df_basis <- 4
+  B_age_w <- ns(age, df = df_basis)      # basis for age -> weight
+  B_age_h <- ns(age, df = df_basis)      # basis for age -> height
 
-  # Simulate height
-  height <- case_when(
-    age <= 9 & age >= 1 ~ 85 + 0.8 * age + 0.8 * weight + 5 * sex + random_error,
-    age > 9 & age <= 18 ~ 90 + 0.9 * age + 0.9 * weight + 10 * sex + random_error,
-    age > 18 & age < 30 ~ 93 + 0.4 * age + 0.8 * weight + 10 * sex + random_error,
-    age >= 30 ~ 90 + 0.4 * age + 0.8 * weight + 10 * sex + random_error
-  )
+  # Define target smooth shapes
+  f_age_to_weight <- function(a){
+    5 + 0.9 * a - 0.02 * a^2 + 2.5 * sin(a / 6)
+  }
 
-  # Combine all in one dataframe
-  data <- data.frame(
-    sex = sex,
-    age = age,
-    weight = weight,
-    height = height
-  )
+  target_w_age <- f_age_to_weight(age)
+
+  # Project target shape onto the spline basis to get coefficients
+  coef_w_age <- coef(lm(target_w_age ~ B_age_w - 1))
+
+  # mu_weight intercept and sex effect
+  Intercept_w <- 50    # baseline weight
+  sex_effect_w <- 10   # added kg if sex == 1
+
+  mu_weight <- Intercept_w + as.vector(B_age_w %*% coef_w_age) + sex_effect_w * sex
+  weight <- mu_weight + eps_w
+
+  # Target for height:
+  f_age_to_height <- function(a){
+    40 + 4.0 * a - 0.06 * a^2 + 5 * sin(a / 8)
+  }
+
+  target_h_age <- f_age_to_height(age)
+
+  # Project age-> height target onto the age
+  coef_h_age <- coef(lm(target_h_age ~ B_age_h - 1))
+
+  # Create a basis for weight
+  B_wht <- ns(weight, df = df_basis)
+
+  # Define a target function of weight
+  f_weight_to_height <- function(w){
+    0.7 * w + 0.01 * (w - 45)^2 / 10
+  }
+  target_h_weight <- f_weight_to_height(weight)
+  coef_h_weight <- coef(lm(target_h_weight ~ B_wht - 1))
+
+  # Generative height: intercept + age-spline + weight-spline + sex + noise
+  Intercept_h <- 10   # baseline height in cm
+  sex_effect_h <- 10  # males taller on average
+
+  mu_height <- Intercept_h +
+    as.vector(B_age_h %*% coef_h_age) +
+    as.vector(B_wht %*% coef_h_weight) +
+    sex_effect_h * sex
+
+  height <- mu_height + eps_h
+
+  # Combine into data frame
+  df <- data.frame(age = age, sex = sex, weight = weight, height = height)
 
   # Return
   list(
-    data_generated = data,
+    data_generated = df,
     plots = list(
       hist_weight = hist(weight),
       hist_height = hist(height),
