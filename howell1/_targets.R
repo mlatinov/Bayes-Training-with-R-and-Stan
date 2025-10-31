@@ -7,6 +7,7 @@ library(bayesplot)
 library(posterior)
 library(dagitty)
 library(ggdag)
+library(patchwork)
 
 #### Source Functions ####
 source("functions/howell_make_dag.R")
@@ -24,6 +25,12 @@ list(
       trim_ws = TRUE)
     ),
 
+  ## Clean and explore the data ##
+  tar_target(
+    name = howell_clean,
+    command = eda_howell(howell_data)
+  ),
+
   ## Causal model DAG ##
   tar_target(
     name = howell_dag,
@@ -34,6 +41,11 @@ list(
   tar_target(
     name = howell_gen,
     command = howell_make_gen(10000)
-  )
+  ),
 
+  # BRMS Model 1 Model Only Height ~ Weight
+  tar_target(
+    name = b_model_weight,
+    command = b_model_w(howell_data)
+    )
 )
