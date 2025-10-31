@@ -7,11 +7,13 @@ library(bayesplot)
 library(posterior)
 library(dagitty)
 library(ggdag)
+library(splines)
 library(patchwork)
 
 #### Source Functions ####
 source("functions/howell_make_dag.R")
 source("functions/howell_make_gen.R")
+source("functions/b_model_weight_function.R")
 
 #### Pipeline ####
 list(
