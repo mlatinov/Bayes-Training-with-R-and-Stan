@@ -2,31 +2,39 @@
 #### BRMS Model Modeling Height ~ Weight ####
 b_model_w <- function(data){
 
+  #### Libraries ####
+  library(brms)
+  library(bayesplot)
+  library(posterior)
+  library(priorsense)
+  library(patchwork)
+
   #### Specify Formula ####
-  formula <- brmsformula(height ~ 1 + weight,family = gaussian)
+  formula <- brmsformula(height ~ 1 + weight,family = gaussian())
 
   #### Specify Priors ####
   priors <- c(
-    prior(normal(1,0.5),class = "b",coef = "weight"),
-    prior(normal(120,25),class = "Intercept"),
-    prior(student_t(10,0,6),class = "sigma")
+    prior(normal(0,5),class = "b",coef = "weight"),
+    prior(student_t(5, 135, 10),class = "Intercept"),
+    prior(student_t(5, 0, 10), class = "sigma")
   )
 
   #### Prior Predictive sim ####
   prior_sim <- brm(
     formula = formula,
-    data = howell_data,
+    data = data,
     family = gaussian,
     prior = priors,
     sample_prior = "only",
     chains = 4,
     iter = 2000,
     cores = 4,
-    seed = 123
-    )
+    seed = 123,
+    backend = "cmdstanr"
+  )
 
   # Check Plausibility of predictions (Prior Predictive Distribution)
-  pp_sim <- pp_check(prior_sim,type = "hist")+
+  pp_sim <- pp_check(prior_sim,type = "dens_overlay")+
     ggtitle("Prior Predictive Distribution")+
     theme_minimal()
 
@@ -55,7 +63,7 @@ b_model_w <- function(data){
   #### BRMS Model ####
   model_w <- brm(
     formula = formula,
-    data = howell_data,
+    data = data,
     family = gaussian,
     prior = priors,
     chains = 4,
@@ -99,6 +107,24 @@ b_model_w <- function(data){
     trace_plots = trace_plot,
     autocorrection = auto_chain,
     effective_sample = effective_sample
+  )
+
+  #### PRIOR Sensitivity Analysis ####
+
+  # Numerical Check
+  sensitivity <- powerscale_sensitivity(model_w)
+
+  # Posterior density under prior perturbations
+  sens_density <- powerscale_plot_dens(model_w) + theme_minimal()
+
+  # Cumulative probability under prior perturbations
+  sens_ecdf <- powerscale_plot_ecdf(model_w) + theme_minimal()
+
+  # Collect in a list
+  prior_sensitivity <- list(
+    summary_table = sensitivity,
+    posterior_density = sens_density,
+    posterior_ecdf = sens_ecdf
   )
 
   #### POSTERIOR Summaries ####
@@ -164,7 +190,6 @@ b_model_w <- function(data){
     bayes_r = bayes_R2(model_w)
   )
 
-
   #### Hypothesis Testing ####
 
   # Hypothesis 1 : The effect of weight on height is positive
@@ -173,8 +198,10 @@ b_model_w <- function(data){
   # Return Everything collected
   return(list(
     model = model,
+    prior_simulation = prior_simulation,
     convergence_diagnostics = convergence_diagnostics,
-    posterior_summaries = posterior_summaryes,
+    prior_sensitivity = prior_sensitivity,
+    posterior_summaries = posterior_summaries,
     posterior_predictive_checks = posterior_predictive_checks,
     model_comparison = model_comparison,
     hypothesis_testing = list(
