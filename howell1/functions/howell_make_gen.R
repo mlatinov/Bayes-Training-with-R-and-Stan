@@ -2,6 +2,9 @@
 #### Function to make a Generative model for Howell dataset ####
 howell_make_gen <- function(n){
 
+  #### Libraries ####
+  library(splines)
+
   # Covariates
   sex <- rbinom(n, 1, 0.5)
   age <- pmax(round(rnorm(n, mean = 20, sd = 10)), 1)
@@ -63,12 +66,17 @@ howell_make_gen <- function(n){
 
   height <- mu_height + eps_h
 
-  # Combine into data frame
-  df <- data.frame(age = age, sex = sex, weight = weight, height = height)
+  # Combine into data frame and scale the predictors
+  data_gen <- data.frame(
+    age = scale(age,center = TRUE),
+    sex = as.factor(sex),
+    weight = scale(weight,center = TRUE),
+    height = height
+    )
 
   # Return
   list(
-    data_generated = df,
+    data_generated = data_gen,
     plots = list(
       hist_weight = hist(weight),
       hist_height = hist(height),

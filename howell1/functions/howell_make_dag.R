@@ -2,6 +2,10 @@
 ## Function to make a DAG for Howell dataset ##
 howell_make_dag <- function(data){
 
+#### Libraries ####
+  library(dagitty)
+  library(ggdag)
+
 # First DAG Modeling only the effect of weight on the height
 dag_one <- dagitty(
   'dag {
