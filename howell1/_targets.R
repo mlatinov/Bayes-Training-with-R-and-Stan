@@ -2,18 +2,9 @@
 #### Libraries ####
 library(targets)
 library(tidyverse)
-library(brms)
-library(bayesplot)
-library(posterior)
-library(dagitty)
-library(ggdag)
-library(splines)
-library(patchwork)
 
 #### Source Functions ####
-source("functions/howell_make_dag.R")
-source("functions/howell_make_gen.R")
-source("functions/b_model_weight_function.R")
+tar_source(files = "functions/")
 
 #### Pipeline ####
 list(
@@ -27,12 +18,6 @@ list(
       trim_ws = TRUE)
     ),
 
-  ## Clean and explore the data ##
-  tar_target(
-    name = howell_clean,
-    command = eda_howell(howell_data)
-  ),
-
   ## Causal model DAG ##
   tar_target(
     name = howell_dag,
@@ -42,12 +27,27 @@ list(
   ## Generative model ##
   tar_target(
     name = howell_gen,
-    command = howell_make_gen(10000)
+    command = howell_make_gen(544)
+  ),
+
+  ## Clean Explore and Compare the data to the Generative model  ##
+  tar_target(
+    name = howell_eda,
+    command = eda_howell(howell_data,howell_gen)
   ),
 
   # BRMS Model 1 Model Only Height ~ Weight
   tar_target(
     name = b_model_weight,
-    command = b_model_w(howell_data)
+    command = b_model_w(howell_eda$datasets$howell_clean)
+    ),
+
+  # RRMS Model 2 Height ~ Weight + Age
+  tar_target(
+    name = b_model_weight_age,
+    command = b_model_wa(howell_eda$datasets$howell_clean)
     )
+
+
+
 )
