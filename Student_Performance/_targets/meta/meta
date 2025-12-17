@@ -1,0 +1,10 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+student_performance|stem|a3b3320dfad37b0c|91367e733e19a048|2c530c1562a7fbd1|-1014635672||t20438.8599026046s|s52483b|52483|rds|local|vector|||0.02||
+clean_performance|stem|3e5c0e5ea6c666fd|6bdef70abde4a533|1a5f5a3e91e850f2|-221620753||t20438.8698298676s|s52040b|52040|rds|local|vector|||0.01||
+eda_plots|stem|776505f156ebec59|24141fc27de71f15|f42ea067ae7e90d4|-99718744||t20438.8801510056s|s676061b|676061|rds|local|vector|||0.07||
+sample_performance|stem|0fac847c2b5ebe82|221cf6c7283fb46a|e93830c4338dfceb|30208273||t20438.9005965685s|s3109b|3109|rds|local|vector|||0||
+model_1|stem|e1a830233a54a99c|301f35689ff05672|903a691cd2a74e99|2073845335||t20438.9121692943s|s113369b|113369|rds|local|vector|||3.29||
+clean_data|function|1144efd9ccfe4160
+eda_performace|function|4dba7459c6e7e596
+stan_model_1|function|01a75d155fdd41a3
+model_1_1|stem|e58fce4a61e74867|9961c837aa539749|d53b44637eeaec68|-1161301276||t20439.7143228627s|s126211b|126211|rds|local|vector|||75.66||
