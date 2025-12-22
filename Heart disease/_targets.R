@@ -52,7 +52,41 @@ list(
     chains = 4,
     iter_sampling = 1000,
     seed = 123
-    )
+    ),
 
+  ##### Q2 What is the Total effect of Cholesterol on Diagnosis #####
+  tar_stan_mcmc(
+    name = q2_model_1,
+    stan_files = "stan_files/q2_model_1.stan",
+    data = list(
+      N = nrow(clean_data),
+      Diagnosis = as.integer(as.character(clean_data$diagnosis)),
+      Cholesterol = clean_data$cholesterol,
+      Age = clean_data$age,
+      Gender = as.integer(as.character(clean_data$gender))
+      ),
+    chains = 4,
+    iter_sampling = 1000,
+    seed = 123
+    ),
+
+  ##### Q3 What is the Direct Effect of Age on Diagnosis #####
+  tar_stan_mcmc(
+    name = q3_model_1,
+    stan_files = "stan_files/q3_model_1.stan",
+    data = list(
+      N = nrow(clean_data),
+      Diagnosis = as.integer(as.character(clean_data$diagnosis)),
+      Age = clean_data$age,
+      Exercise_angina = as.integer(as.character(clean_data$exercise_angina)),
+      Chest_pain = as.integer(as.character(clean_data$chest_pain)),
+      N_vessels = as.integer(as.character(clean_data$num_vessels)),
+      ST_slope = as.integer(as.character(clean_data$st_slope)),
+      ST_depression = clean_data$st_depression
+    ),
+    chains = 4,
+    iter_sampling = 1000,
+    seed = 123
+  ),
 
 )
